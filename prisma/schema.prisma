@@ -17,6 +17,28 @@ model User {
   externalUserId String  @unique
   bio            String? @db.String
 
+  following  Follow[] @relation("Following")
+  followedBy Follow[] @relation("FollowedBy")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  Follow    Follow[]
+}
+
+model Follow {
+  id          String @id @default(uuid())
+  followerId  String
+  followingId String
+
+  follower  User    @relation(name: "Following", fields: [followerId], references: [id], onDelete: Cascade)
+  following User    @relation(name: "FollowedBy", fields: [followingId], references: [id], onDelete: Cascade)
+  User      User?   @relation(fields: [userId], references: [id])
+  userId    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
 }
