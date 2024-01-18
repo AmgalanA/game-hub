@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { WebhookEvent } from '@clerk/nextjs/server'
 
 import { db } from '@/lib/db'
+import { resetIngresses } from '@/actions/ingress'
 
 export async function POST(req: Request) {
     const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
      // If there are no headers, error out
     if (!svix_id || !svix_timestamp || !svix_signature) {
         return new Response('Error occured -- no svix headers', {
-        status: 400
+            status: 400
         })
     }
 
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
     } catch (err) {
         console.error('Error verifying webhook:', err);
         return new Response('Error occured', {
-        status: 400
+            status: 400
         })
     }
     
@@ -54,6 +55,11 @@ export async function POST(req: Request) {
                 externalUserId: payload.data.id,
                 username: payload.data.username,
                 imageUrl: payload.data.profile_image_url,
+                stream: {
+                    create: {
+                        name: `${payload.data.username}'s stream`,
+                    }
+                }
             }
         })
     }
@@ -71,11 +77,13 @@ export async function POST(req: Request) {
     }
 
     if (eventType === 'user.deleted') {
+        await resetIngresses(payload.data.id);
+
         await db.user.delete({
             where: {
                 externalUserId: payload.data.id
             }
-        })
+        });
     }
     
     return new Response('', { status: 200 })
